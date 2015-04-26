@@ -1,0 +1,65 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:batch="http://www.springframework.org/schema/batch" 
+	xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/batch
+	http://www.springframework.org/schema/batch/spring-batch-2.2.xsd
+	http://www.springframework.org/schema/beans 
+	http://www.springframework.org/schema/beans/spring-beans-3.2.xsd">
+ 
+ 	<!-- VO -->
+  <bean id="report" class="aba.batch.web.perso.vo.Report" scope="prototype" />
+  
+  <!-- READER -->
+  <bean id="cvsFileItemReader" class="org.springframework.batch.item.file.FlatFileItemReader">
+<!-- 	emplacement du fichier à lire -->
+	<property name="resource" value="${file.input}" />
+	<!-- pour ignorer la premiere ligne du fichier -->
+	<property name="linesToSkip" value="1" />  
+	<property name="lineMapper">
+		<bean class="org.springframework.batch.item.file.mapping.DefaultLineMapper">
+			  <!--split it -->
+			  <property name="lineTokenizer">
+			        <bean class="org.springframework.batch.item.file.transform.DelimitedLineTokenizer">
+						<!-- nom des champs dans le fichier à lire -->
+						<property name="names" value="DATE,IMPRESSIONS,CLICKS,EARNING" />
+						<!-- le séparateur des valeurs dans le fichier à lire -->
+						<property name="delimiter" value="," /> 
+				    </bean>
+			  </property>
+			  <!-- Le mapper entres les champs du fichier et les colonnes dans la database -->
+			  <property name="fieldSetMapper"> 
+			  	  <!-- mon propre mapper -->
+			  	  <bean class="aba.batch.web.perso.mapper.ReportsMapper" />   
+				 <!--  map to an object -->
+<!-- 				  <bean class="org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper"> -->
+<!-- 					<property name="prototypeBeanName" value="report" /> -->
+<!-- 				  </bean>			 -->
+			  </property>
+		  </bean>
+	  </property>
+  </bean>
+ 
+ 	<!-- WRITER : ecrir le fichier dans la base de données -->
+  <bean id="mysqlItemWriter"
+	class="org.springframework.batch.item.database.JdbcBatchItemWriter">
+	<property name="dataSource" ref="dataSource" />
+	<property name="sql">
+	  <value>
+            <![CDATA[        
+            	insert into RAW_REPORT(DATE,IMPRESSIONS,CLICKS,EARNING) 
+			values (:date, :impressions, :clicks, :earning)
+            ]]>
+	  </value>
+	</property>
+	<!-- It will take care matching between object property and sql name parameter -->
+	<property name="itemSqlParameterSourceProvider">
+		<bean
+		class="org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider" />
+	</property>
+  </bean>
+ 
+ <!-- LISTENER -->
+ <bean id="projectJobListener" class="aba.batch.web.perso.listener.ProjectJobListener"/>
+ 
+ </beans>
